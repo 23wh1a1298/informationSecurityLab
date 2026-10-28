@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Tampering Detection System</title>
+  <style>
+/* ===== Color and spacing variables (blue & white theme) ===== */
+:root {
+  --blue-900: #0b2a5b;
+  --blue-700: #1250b0;
+  --blue-600: #1a63d6;
+  --blue-100: #e3eefc;
+  --blue-50:  #f3f8ff;
+  --white:    #ffffff;
+  --text:     #1b2a41;
+  --muted:    #5b6b82;
+  --border:   #d3e0f3;
+
+  --green:    #15803d;
+  --green-bg: #e7f6ec;
+  --red:      #b91c1c;
+  --red-bg:   #fdeaea;
+
+  --radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  color: var(--text);
+  background: var(--blue-50);
+  line-height: 1.5;
+}
+
+.container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ===== Header ===== */
+.header {
+  background: linear-gradient(135deg, var(--blue-900), var(--blue-600));
+  color: var(--white);
+  text-align: center;
+  padding: 48px 0 56px;
+}
+
+.header-icon {
+  width: 56px;
+  height: 56px;
+  fill: var(--white);
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.header p {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+/* ===== Cards ===== */
+main {
+  padding-top: 32px;
+  padding-bottom: 40px;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: 0 4px 14px rgba(18, 80, 176, 0.08);
+}
+
+.card h2 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  color: var(--blue-700);
+}
+
+.hint {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* ===== Upload section: two columns on desktop ===== */
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Hide the default file input; the label below acts as the button */
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.file-label {
+  display: block;
+  padding: 22px 16px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--blue-700);
+  background: var(--blue-50);
+  border: 2px dashed var(--blue-600);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.file-label:hover,
+.file-input:focus-visible + .file-label {
+  background: var(--blue-100);
+}
+
+.file-input:focus-visible + .file-label {
+  outline: 3px solid var(--blue-600);
+  outline-offset: 2px;
+}
+
+.file-info {
+  margin-top: 12px;
+  font-size: 0.92rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.file-info.selected {
+  color: var(--text);
+}
+
+.file-info strong {
+  display: block;
+}
+
+/* ===== Error message ===== */
+.error-message {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid #f3b8b8;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+/* ===== Buttons ===== */
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 14px 28px;
+  border: 2px solid transparent;
+  transition: background 0.15s, transform 0.05s;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--blue-600);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  flex: 1;
+  font-size: 1.1rem;
+  background: var(--blue-600);
+  color: var(--white);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--blue-700);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--white);
+  color: var(--blue-700);
+  border-color: var(--blue-600);
+}
+
+.btn-secondary:hover {
+  background: var(--blue-100);
+}
+
+/* ===== Loading spinner ===== */
+.loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+  color: var(--blue-700);
+  font-weight: 600;
+}
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 4px solid var(--blue-100);
+  border-top-color: var(--blue-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2s; }
+}
+
+/* ===== Results ===== */
+.results {
+  margin-top: 28px;
+}
+
+.hash-block {
+  margin-top: 16px;
+}
+
+.hash-block h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.hash-block code {
+  display: block;
+  padding: 12px 14px;
+  background: var(--blue-50);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.9rem;
+  word-break: break-all; /* long hashes wrap on small screens */
+}
+
+.verdict {
+  margin-top: 24px;
+  padding: 18px;
+  border-radius: var(--radius);
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.verdict.verified {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 2px solid var(--green);
+}
+
+.verdict.tampered {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 2px solid var(--red);
+}
+
+/* ===== Footer ===== */
+.footer {
+  text-align: center;
+  padding: 0 20px 32px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* The hidden attribute must always win over display rules above */
+[hidden] {
+  display: none !important;
+}
+
+/* ===== Mobile layout ===== */
+@media (max-width: 640px) {
+  .header h1 { font-size: 1.6rem; }
+  .upload-grid { grid-template-columns: 1fr; }
+  .actions { flex-direction: column; }
+}
+
+  </style>
+</head>
+<body>
+
+  <!-- ===== Header ===== -->
+  <header class="header">
+    <div class="container">
+      <svg class="header-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4-6 6Z"/>
+      </svg>
+      <h1>File Tampering Detection System</h1>
+      <p>Verify file integrity and detect unauthorized modifications.</p>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ===== Upload Section ===== -->
+    <section class="upload-grid" aria-label="File upload">
+
+      <!-- Original file -->
+      <div class="card">
+        <h2>Original File</h2>
+        <p class="hint">The trusted version you want to check against.</p>
+
+        <input type="file" id="originalFile" class="file-input">
+        <label for="originalFile" class="file-label">Choose original file</label>
+
+        <div class="file-info" id="originalInfo">No file selected</div>
+      </div>
+
+      <!-- Updated file -->
+      <div class="card">
+        <h2>Updated File</h2>
+        <p class="hint">The version that may have been modified.</p>
+
+        <input type="file" id="updatedFile" class="file-input">
+        <label for="updatedFile" class="file-label">Choose updated file</label>
+
+        <div class="file-info" id="updatedInfo">No file selected</div>
+      </div>
+
+    </section>
+
+    <!-- ===== Error message ===== -->
+    <div class="error-message" id="errorMessage" role="alert" hidden></div>
+
+    <!-- ===== Buttons ===== -->
+    <div class="actions">
+      <button type="button" class="btn btn-primary" id="compareBtn">Compare Files</button>
+      <button type="button" class="btn btn-secondary" id="resetBtn">Reset</button>
+    </div>
+
+    <!-- ===== Loading indicator ===== -->
+    <div class="loader" id="loader" hidden>
+      <div class="spinner"></div>
+      <span>Calculating SHA-256 hashes…</span>
+    </div>
+
+    <!-- ===== Results Section ===== -->
+    <section class="card results" id="results" aria-live="polite" hidden>
+      <h2>Results</h2>
+
+      <div class="hash-block">
+        <h3>Original file hash (SHA-256)</h3>
+        <code id="originalHash"></code>
+      </div>
+
+      <div class="hash-block">
+        <h3>Updated file hash (SHA-256)</h3>
+        <code id="updatedHash"></code>
+      </div>
+
+      <div class="verdict" id="verdict"></div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>All hashing happens in your browser. Your files are never uploaded anywhere.</p>
+  </footer>
+
+  <script>
+// =====================================================
+// File Tampering Detection System
+// Compares SHA-256 hashes of two files to detect changes.
+// =====================================================
+
+// ----- Get references to the page elements -----
+const originalInput = document.getElementById("originalFile");
+const updatedInput  = document.getElementById("updatedFile");
+const originalInfo  = document.getElementById("originalInfo");
+const updatedInfo   = document.getElementById("updatedInfo");
+
+const compareBtn = document.getElementById("compareBtn");
+const resetBtn   = document.getElementById("resetBtn");
+
+const errorBox = document.getElementById("errorMessage");
+const loader   = document.getElementById("loader");
+const results  = document.getElementById("results");
+
+const originalHashEl = document.getElementById("originalHash");
+const updatedHashEl  = document.getElementById("updatedHash");
+const verdictEl      = document.getElementById("verdict");
+
+
+// ----- Helper: convert bytes into a readable size (KB, MB...) -----
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + " bytes";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+}
+
+
+// ----- Show the chosen file's name and size under its upload box -----
+function showFileInfo(input, infoElement) {
+  const file = input.files[0];
+
+  if (file) {
+    infoElement.innerHTML = "";
+    const name = document.createElement("strong");
+    name.textContent = file.name;            // textContent keeps file names safe
+    const size = document.createElement("span");
+    size.textContent = "Size: " + formatFileSize(file.size);
+    infoElement.append(name, size);
+    infoElement.classList.add("selected");
+    hideError();
+  } else {
+    infoElement.textContent = "No file selected";
+    infoElement.classList.remove("selected");
+  }
+
+  // Old results no longer match the selected files, so hide them
+  results.hidden = true;
+}
+
+
+// ----- Generate a SHA-256 hash for a file using the Web Crypto API -----
+// Steps:
+//   1. Read the whole file into memory as raw bytes (ArrayBuffer)
+//   2. Pass the bytes to crypto.subtle.digest("SHA-256", ...)
+//   3. Convert the resulting bytes into a hexadecimal string
+async function generateSHA256(file) {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+
+  // Turn each byte (0-255) into two hex characters, then join them
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray
+    .map(byte => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+
+// ----- Error message helpers -----
+function showError(message) {
+  errorBox.textContent = message;
+  errorBox.hidden = false;
+}
+
+function hideError() {
+  errorBox.hidden = true;
+}
+
+
+// ----- Main function: runs when "Compare Files" is clicked -----
+async function compareFiles() {
+  hideError();
+  results.hidden = true;
+
+  const originalFile = originalInput.files[0];
+  const updatedFile  = updatedInput.files[0];
+
+  // 1. Make sure both files were chosen
+  if (!originalFile || !updatedFile) {
+    showError("Please upload both the original file and the updated file before comparing.");
+    return;
+  }
+
+  // 2. The Web Crypto API only works on secure pages (https, localhost, or file://)
+  if (!window.crypto || !window.crypto.subtle) {
+    showError("This browser or page does not support the Web Crypto API. Open the page in a modern browser such as Chrome, Edge, or Firefox.");
+    return;
+  }
+
+  // 3. Show the loading spinner and disable the button while hashing
+  loader.hidden = false;
+  compareBtn.disabled = true;
+
+  try {
+    // Hash both files at the same time
+    const [originalHash, updatedHash] = await Promise.all([
+      generateSHA256(originalFile),
+      generateSHA256(updatedFile)
+    ]);
+
+    showResults(originalHash, updatedHash);
+  } catch (error) {
+    showError("Something went wrong while reading the files. Please try again.");
+    console.error(error);
+  } finally {
+    // Always stop the loading state, even if an error happened
+    loader.hidden = true;
+    compareBtn.disabled = false;
+  }
+}
+
+
+// ----- Display both hashes and the final verdict -----
+function showResults(originalHash, updatedHash) {
+  originalHashEl.textContent = originalHash;
+  updatedHashEl.textContent  = updatedHash;
+
+  // Identical hashes = identical files. Any change, even one bit, changes the hash.
+  if (originalHash === updatedHash) {
+    verdictEl.textContent = "File Integrity Verified – No Tampering Detected.";
+    verdictEl.className = "verdict verified";   // green
+  } else {
+    verdictEl.textContent = "File Tampering Detected – The File Has Been Modified.";
+    verdictEl.className = "verdict tampered";   // red
+  }
+
+  results.hidden = false;
+  results.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+
+// ----- Reset button: clear files, messages and results -----
+function resetApp() {
+  originalInput.value = "";
+  updatedInput.value  = "";
+
+  showFileInfo(originalInput, originalInfo);
+  showFileInfo(updatedInput, updatedInfo);
+
+  hideError();
+  loader.hidden = true;
+  results.hidden = true;
+  originalHashEl.textContent = "";
+  updatedHashEl.textContent  = "";
+  verdictEl.textContent = "";
+  verdictEl.className = "verdict";
+  compareBtn.disabled = false;
+}
+
+
+// ----- Connect the page elements to the functions above -----
+originalInput.addEventListener("change", () => showFileInfo(originalInput, originalInfo));
+updatedInput.addEventListener("change",  () => showFileInfo(updatedInput, updatedInfo));
+compareBtn.addEventListener("click", compareFiles);
+resetBtn.addEventListener("click", resetApp);
+
+  </script>
+</body>
+</html>
